@@ -1,6 +1,14 @@
+import os
+import django
 import time
 from playwright.sync_api import Playwright, sync_playwright
 
+os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'my_parser_project.settings')
+django.setup()
+
+from core.models import Product
 
 class parse:
     def __init__(self, keyword):
@@ -25,11 +33,19 @@ class parse:
                 price_el = card.query_selector("[class*='priceVal']")
                 price = price_el.inner_text().strip() if price_el else "Цена не указана"
 
-                print(f"Товар №{count + 1}: {title} | Цена: {price}")
+                obj, created = Product.objects.update_or_create(
+                    title=title,
+                    defaults={'price': price}
+                )
 
-                # Сохраняем (по желанию)
+                if created:
+                    print(f"--- Успешно создано в БД: {title}")
+                else:
+                    print(f"--- Цена обновлена в БД: {title}")
+
+                # Оставляем списки только для итогового счетчика
                 self.list_item_name.append(title)
-                self.list_item_price.append(price)
+                print(f"Товар №{count + 1}: {title} | Цена: {price} [OK]")
 
             except Exception as e:
                 print(f"Ошибка в товаре №{count + 1}: {e}")
